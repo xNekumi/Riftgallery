@@ -39,10 +39,10 @@ cd Riftgallery
 docker compose up -d --build
 ```
 
-Die Seite läuft dann auf `http://127.0.0.1:3000` (nur lokal auf dem Server erreichbar, nginx leitet weiter).
+Die Seite läuft dann auf `http://127.0.0.1:3001` (nur lokal auf dem Server erreichbar, nginx leitet weiter).
 Durch `restart: unless-stopped` startet der Container nach einem Neustart des Servers automatisch wieder.
 
-Ist Port 3000 schon belegt, einen anderen nehmen, z. B. `RIFTGALLERY_PORT=3100 docker compose up -d --build`
+Ist Port 3001 schon belegt, einen anderen nehmen, z. B. `RIFTGALLERY_PORT=3100 docker compose up -d --build`
 (dann auch in der nginx-Config anpassen).
 
 Beim ersten Start werden die Kartendaten und alle Bilder geladen (1–3 Minuten). Den Fortschritt siehst du mit
@@ -60,7 +60,7 @@ sudo apt install certbot python3-certbot-nginx
 sudo certbot --nginx -d kumilan.com -d www.kumilan.com
 ```
 
-Im Router müssen Port **80** und **443** auf den Server freigegeben sein (Port 3000 **nicht** freigeben).
+Im Router müssen Port **80** und **443** auf den Server freigegeben sein (Port 3001 **nicht** freigeben).
 HTTPS ist wichtig, weil Passwörter übertragen werden.
 
 Danach `https://kumilan.com` öffnen und den ersten Account anlegen – dieser ist Admin.
