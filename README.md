@@ -45,6 +45,10 @@ Durch `restart: unless-stopped` startet der Container nach einem Neustart des Se
 Ist Port 3001 schon belegt, einen anderen nehmen, z. B. `RIFTGALLERY_PORT=3100 docker compose up -d --build`
 (dann auch in der nginx-Config anpassen).
 
+Ohne nginx direkt über `http://<domain>:3001` erreichbar machen (z. B. übergangsweise):
+`RIFTGALLERY_BIND=0.0.0.0 docker compose up -d` und Port 3001 im Router freigeben. Achtung: Das ist
+unverschlüsseltes HTTP, Passwörter gehen also im Klartext übers Netz. Dauerhaft besser über nginx + HTTPS.
+
 Beim ersten Start werden die Kartendaten und alle Bilder geladen (1–3 Minuten). Den Fortschritt siehst du mit
 `docker compose logs -f`.
 
