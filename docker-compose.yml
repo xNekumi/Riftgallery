@@ -6,7 +6,7 @@ services:
     # Starts automatically with Docker (e.g. after a server reboot) and after crashes.
     restart: unless-stopped
     ports:
-      # By default only reachable from the server itself; nginx forwards riftbound.kumilan.com to it.
+      # Set in .env (see .env.example). Default: only reachable from the server itself, via nginx.
       # RIFTGALLERY_BIND=0.0.0.0 opens it on all interfaces (plain HTTP, e.g. http://kumilan.com:3001).
       - "${RIFTGALLERY_BIND:-127.0.0.1}:${RIFTGALLERY_PORT:-3001}:3000"
     environment:

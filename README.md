@@ -34,50 +34,54 @@ Kartenbilder werden einmalig heruntergeladen und lokal als WebP gespeichert (ca.
 Voraussetzung: Docker mit Compose-Plugin (`docker compose version` sollte funktionieren) und nginx.
 
 ```bash
-git clone https://github.com/xNekumi/Riftgallery.git
+git clone -b claude/quirky-planck-6ox3t6 https://github.com/xNekumi/Riftgallery.git
 cd Riftgallery
+
+# Konfiguration anlegen (Port und Erreichbarkeit)
+cp .env.example .env
+nano .env
+
 docker compose up -d --build
 ```
 
-Die Seite läuft dann auf `http://127.0.0.1:3001` (nur lokal auf dem Server erreichbar, nginx leitet weiter).
 Durch `restart: unless-stopped` startet der Container nach einem Neustart des Servers automatisch wieder.
 
-Ist Port 3001 schon belegt, einen anderen nehmen, z. B. `RIFTGALLERY_PORT=3100 docker compose up -d --build`
-(dann auch in der nginx-Config anpassen).
+Einstellungen in `.env`:
 
-Ohne nginx direkt über `http://<domain>:3001` erreichbar machen (z. B. übergangsweise):
-`RIFTGALLERY_BIND=0.0.0.0 docker compose up -d` und Port 3001 im Router freigeben. Achtung: Das ist
-unverschlüsseltes HTTP, Passwörter gehen also im Klartext übers Netz. Dauerhaft besser über nginx + HTTPS.
+- `RIFTGALLERY_PORT` – Port auf dem Server (Standard `3001`).
+- `RIFTGALLERY_BIND=0.0.0.0` – von überall erreichbar, z. B. `http://kumilan.com:3001`
+  (Port im Router freigeben). Achtung: unverschlüsseltes HTTP, Passwörter gehen im Klartext übers Netz.
+- `RIFTGALLERY_BIND=127.0.0.1` – nur über nginx mit HTTPS erreichbar (empfohlen, siehe unten).
+  Ohne `.env` ist das der Standard.
 
 Beim ersten Start werden die Kartendaten und alle Bilder geladen (1–3 Minuten). Den Fortschritt siehst du mit
 `docker compose logs -f`.
 
-### nginx + HTTPS für kumilan.com
+### nginx + HTTPS (riftbound.kumilan.com)
+
+Empfohlen statt `http://kumilan.com:3001`. Dafür in `.env` `RIFTGALLERY_BIND=127.0.0.1` setzen.
 
 ```bash
-sudo cp deploy/nginx/kumilan.com.conf /etc/nginx/sites-available/kumilan.com
-sudo ln -s /etc/nginx/sites-available/kumilan.com /etc/nginx/sites-enabled/
+sudo cp deploy/nginx/riftbound.kumilan.com.conf /etc/nginx/conf.d/riftbound.conf
 sudo nginx -t && sudo systemctl reload nginx
 
 # HTTPS-Zertifikat (Let's Encrypt). certbot ergänzt die Config automatisch um HTTPS + Weiterleitung.
-sudo apt install certbot python3-certbot-nginx
-sudo certbot --nginx -d kumilan.com -d www.kumilan.com
+sudo certbot --nginx -d riftbound.kumilan.com
 ```
 
-Im Router müssen Port **80** und **443** auf den Server freigegeben sein (Port 3001 **nicht** freigeben).
-HTTPS ist wichtig, weil Passwörter übertragen werden.
+Gibt es `/etc/nginx/conf.d/riftbound.conf` schon (mit Zertifikat von certbot), nicht überschreiben – dort reicht
+`proxy_pass http://127.0.0.1:3001;` im `location /`-Block.
 
-Danach `https://kumilan.com` öffnen und den ersten Account anlegen – dieser ist Admin.
+Im Router müssen Port **80** und **443** auf den Server freigegeben sein, und `riftbound.kumilan.com` muss per
+DNS (am besten als CNAME auf die per DynDNS aktuell gehaltene Hauptdomain) auf deine IP zeigen.
 
-> Läuft auf kumilan.com schon etwas anderes, kann die Galerie auch auf einer Subdomain laufen, z. B.
-> `cards.kumilan.com`: DNS-Eintrag anlegen und in der nginx-Config/certbot-Befehl den Namen ersetzen.
+Danach `https://riftbound.kumilan.com` öffnen und den ersten Account anlegen – dieser ist Admin.
 
 ### Updates einspielen
 
 ```bash
 cd Riftgallery
-git pull
-docker compose up -d --build
+./update.sh
 ```
 
 Die Daten liegen im Docker-Volume `riftgallery_riftgallery-data` und bleiben bei Updates erhalten.
