@@ -37,12 +37,11 @@ export function nameKey(name: string): string {
 }
 
 /**
- * Groups a card with its alternate versions in the same set: OGN-202, OGN-202a and OGN-202b share
- * "OGN|202", as do an overnumbered card and its signature version (OGN-301 / OGN-301*).
+ * Groups every version of a card within one set into a single gallery tile: standard art, alt arts
+ * (OGN-039a), overnumbered and signature versions. A reprint in another set gets its own tile there.
  */
 export function versionKey(card: Card): string {
-  const num = card.code.split('/')[0].split('-').slice(1).join('-');
-  return `${card.set}|${num.replace(/[a-z*]+$/, '')}`;
+  return `${card.set}|${card.key}`;
 }
 
 export function thumbUrl(card: Card): string {

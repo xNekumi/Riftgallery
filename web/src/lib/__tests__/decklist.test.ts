@@ -109,11 +109,13 @@ describe('matchCardQuery', () => {
 
 describe('versionKey', () => {
   const byCode = (code: string) => cards.find((c) => c.code === code)!;
-  it('groups alt arts with their standard version', () => {
+  it('groups alt art, overnumbered and signature versions within a set', () => {
     expect(versionKey(byCode('OGN-202a/298'))).toBe(versionKey(byCode('OGN-202/298')));
-    expect(versionKey(byCode('OGN-202/298'))).toBe('OGN|202');
+    expect(versionKey(byCode('OGN-301/298'))).toBe(versionKey(byCode('OGN-251/298')));
+    expect(versionKey(byCode('OGN-301*/298'))).toBe(versionKey(byCode('OGN-251/298')));
   });
-  it('keeps different numbers apart', () => {
+  it('keeps reprints in other sets and different cards apart', () => {
+    expect(versionKey(byCode('VEN-168/166'))).not.toBe(versionKey(byCode('OGN-030/298')));
     expect(versionKey(byCode('OGN-251/298'))).not.toBe(versionKey(byCode('OGN-202/298')));
   });
 });

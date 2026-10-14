@@ -9,8 +9,9 @@ Kartenbilder werden einmalig heruntergeladen und lokal als WebP gespeichert (ca.
 
 ## Funktionen
 
-- **Galerie**: alle Karten als Bild, sortiert nach Set und Sammlernummer. Standardmäßig („Grouped“) ist jede Nummer eine
-  Kachel; Alt Arts (XXXa, XXXb …) stecken dahinter und sind per Klick erreichbar. „All versions“ zeigt jede Version einzeln.
+- **Galerie**: alle Karten als Bild, sortiert nach Set und Sammlernummer. Standardmäßig („Grouped“) hat jede Karte pro Set
+  eine Kachel; Alt Art, Overnumbered und Signature stecken dahinter. Neuauflagen in anderen Sets erscheinen dort erneut.
+  Beim Öffnen einer Karte stehen unter dem Bild alle Versionen aus allen Sets. „All versions“ zeigt jede Version einzeln.
   Karten, die du nicht besitzt, sind ausgegraut. Auf jeder Karte kannst du zwischen **Normal** und **Foil**
   umschalten und mit `−`/`+` die Anzahl ändern. Fortschritt pro Set wird angezeigt.
 - **Detailansicht** (Klick auf die Karte): großes Bild, Kartentext, Anzahl je Foil/Normal **und Sprache**,

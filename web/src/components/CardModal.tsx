@@ -8,6 +8,13 @@ import { PRIORITIES, wantsForCard } from '../lib/wants';
 import { CardText } from './CardText';
 import { DomainDots, Modal, Stepper } from './ui';
 
+const VERSION_LABELS: Partial<Record<Card['variant'], string>> = {
+  base: 'Standard',
+  alt: 'Alt Art',
+  overnumbered: 'Overnumbered',
+  signature: 'Signature',
+};
+
 interface Props {
   card: Card;
   onClose: () => void;
@@ -77,6 +84,27 @@ export function CardModal({ card, onClose, onNavigate, prev, next }: Props) {
               </button>
             )}
           </div>
+          {printings.length > 1 && (
+            <section className="panel versions-panel">
+              <h3>
+                Versions <span className="muted">· click to switch</span>
+              </h3>
+              <div className="printings">
+                {printings.map((p) => (
+                  <button
+                    key={p.id}
+                    className={`printing ${p.id === card.id ? 'current' : ''} ${ownedOf(owned, p.id).total ? '' : 'missing'}`}
+                    onClick={() => onNavigate?.(p)}
+                    title={`${cardLabel(p)} · ${p.code}`}
+                  >
+                    <img src={thumbUrl(p)} alt={p.name} loading="lazy" />
+                    <span>{p.code.split('/')[0]}</span>
+                    <small>{VERSION_LABELS[p.variant] ?? p.variantLabel}</small>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
 
         <div className="card-modal-info">
@@ -124,26 +152,6 @@ export function CardModal({ card, onClose, onNavigate, prev, next }: Props) {
           )}
           {card.artist && <p className="muted small">Illustrated by {card.artist}</p>}
 
-          {printings.length > 1 && (
-            <section className="panel">
-              <h3>
-                Versions <span className="muted">· click to switch</span>
-              </h3>
-              <div className="printings">
-                {printings.map((p) => (
-                  <button
-                    key={p.id}
-                    className={`printing ${p.id === card.id ? 'current' : ''} ${ownedOf(owned, p.id).total ? '' : 'missing'}`}
-                    onClick={() => onNavigate?.(p)}
-                    title={`${cardLabel(p)} · ${p.code}`}
-                  >
-                    <img src={thumbUrl(p)} alt={p.name} loading="lazy" />
-                    <span>{p.code.split('/')[0]}</span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
 
           <section className="panel">
             <h3>

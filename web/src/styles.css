@@ -1040,6 +1040,16 @@ h3 .seg button {
   border-radius: 4px;
   display: block;
 }
+.printing span,
+.printing small {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.printing small {
+  font-size: 0.62rem;
+}
 .printing.current {
   border-color: var(--gold);
 }
