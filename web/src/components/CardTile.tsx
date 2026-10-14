@@ -6,6 +6,10 @@ import { thumbUrl } from '../lib/cards';
 interface Props {
   card: Card;
   owned: Owned | undefined;
+  /** Versions shown behind this tile (1 when versions are not grouped). */
+  versionCount: number;
+  /** How many of those versions you own at least one copy of. */
+  ownedVersionCount: number;
   wanted: boolean;
   inDecks: boolean;
   language: string;
@@ -30,11 +34,24 @@ function languageToDecrement(owned: Owned | undefined, finish: Finish, language:
   return null;
 }
 
-export const CardTile = memo(function CardTile({ card, owned, wanted, inDecks, language, onOpen, onChange }: Props) {
+export const CardTile = memo(function CardTile({
+  card,
+  owned,
+  versionCount,
+  ownedVersionCount,
+  wanted,
+  inDecks,
+  language,
+  onOpen,
+  onChange,
+}: Props) {
   const [finish, setFinish] = useState<Finish>(() => initialFinish(card, owned));
   const count = owned?.[finish] ?? 0;
   const canToggle = card.finishes.length > 1;
   const isFoil = finish === 'foil';
+  const isGroup = versionCount > 1;
+  // A grouped tile only greys out when you own none of the card's versions.
+  const missing = isGroup ? ownedVersionCount === 0 && !count : !count;
 
   const add = (delta: number) => {
     const lang = delta > 0 ? language : languageToDecrement(owned, finish, language);
@@ -43,7 +60,7 @@ export const CardTile = memo(function CardTile({ card, owned, wanted, inDecks, l
   };
 
   return (
-    <div className={`tile ${count ? '' : 'missing'} ${isFoil ? 'is-foil' : ''}`}>
+    <div className={`tile ${missing ? 'missing' : ''} ${isFoil ? 'is-foil' : ''}`}>
       <button className="tile-img" onClick={() => onOpen(card)} aria-label={`Show ${card.name}`}>
         <img src={thumbUrl(card)} alt={card.name} loading="lazy" decoding="async" />
         {isFoil && <span className="holo" aria-hidden="true" />}
@@ -59,7 +76,16 @@ export const CardTile = memo(function CardTile({ card, owned, wanted, inDecks, l
             ▤
           </span>
         )}
-        {card.variant !== 'base' && <span className="badge variant">{card.variantLabel}</span>}
+        {isGroup ? (
+          <span
+            className={`badge versions ${ownedVersionCount ? 'has' : ''}`}
+            title={`${ownedVersionCount} of ${versionCount} versions owned – click the card to see all`}
+          >
+            {ownedVersionCount}/{versionCount} versions
+          </span>
+        ) : (
+          card.variant !== 'base' && <span className="badge variant">{card.variantLabel}</span>
+        )}
       </div>
       <div className="tile-bar">
         <button

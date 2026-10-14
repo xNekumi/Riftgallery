@@ -36,6 +36,15 @@ export function nameKey(name: string): string {
     .trim();
 }
 
+/**
+ * Groups a card with its alternate versions in the same set: OGN-202, OGN-202a and OGN-202b share
+ * "OGN|202", as do an overnumbered card and its signature version (OGN-301 / OGN-301*).
+ */
+export function versionKey(card: Card): string {
+  const num = card.code.split('/')[0].split('-').slice(1).join('-');
+  return `${card.set}|${num.replace(/[a-z*]+$/, '')}`;
+}
+
 export function thumbUrl(card: Card): string {
   return card.img ? `/images/thumb/${card.id}.webp?v=${card.img}` : card.remoteImage;
 }

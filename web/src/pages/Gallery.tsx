@@ -4,10 +4,12 @@ import { useData } from '../store';
 import { CardTile } from '../components/CardTile';
 import { CardModal } from '../components/CardModal';
 import { FilterPanel } from '../components/FilterPanel';
+import { versionKey } from '../lib/cards';
 import { DEFAULT_FILTERS, SORT_OPTIONS, activeFilterCount, applyFilters, buildFilterContext, type Filters } from '../lib/filters';
 
 const STORAGE_KEY = 'rg.gallery.filters';
 const SIZE_KEY = 'rg.gallery.size';
+const GROUP_KEY = 'rg.gallery.grouped';
 
 function loadFilters(): Filters {
   try {
@@ -31,15 +33,24 @@ export function Gallery() {
     }
   });
   const [search, setSearch] = useState(filters.q);
+  // Grouped: one tile per card number, alternate versions (XXXa, XXXb …) are reached by clicking it.
+  const [grouped, setGrouped] = useState(() => {
+    try {
+      return localStorage.getItem(GROUP_KEY) !== 'false';
+    } catch {
+      return true;
+    }
+  });
 
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
       localStorage.setItem(SIZE_KEY, size);
+      localStorage.setItem(GROUP_KEY, String(grouped));
     } catch {
       /* storage unavailable */
     }
-  }, [filters, size]);
+  }, [filters, size, grouped]);
 
   // Debounce typing so filtering 1,300+ cards doesn't run on every keystroke.
   useEffect(() => {
@@ -48,7 +59,29 @@ export function Gallery() {
   }, [search]);
 
   const ctx = useMemo(() => buildFilterContext(owned, ownedByKey, wants, decks), [owned, ownedByKey, wants, decks]);
-  const results = useMemo(() => applyFilters(cards, filters, ctx), [cards, filters, ctx]);
+  const matching = useMemo(() => applyFilters(cards, filters, ctx), [cards, filters, ctx]);
+
+  const versionsOf = useMemo(() => {
+    const m = new Map<string, Card[]>();
+    for (const c of cards) {
+      const k = versionKey(c);
+      if (!m.has(k)) m.set(k, []);
+      m.get(k)!.push(c);
+    }
+    return m;
+  }, [cards]);
+
+  // In grouped mode the first matching version (usually the standard art) stands in for the whole group.
+  const results = useMemo(() => {
+    if (!grouped) return matching;
+    const seen = new Set<string>();
+    return matching.filter((c) => {
+      const k = versionKey(c);
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  }, [matching, grouped]);
 
   const groups = useMemo(() => {
     if (filters.sort !== 'number') return [{ id: '', name: '', cards: results }];
@@ -61,18 +94,25 @@ export function Gallery() {
     return order.filter((s) => bySet.has(s.id)).map((s) => ({ id: s.id, name: s.name, cards: bySet.get(s.id)! }));
   }, [results, filters.sort, filters.desc, sets]);
 
+  const ownedVersions = useCallback(
+    (c: Card) => (versionsOf.get(versionKey(c)) ?? [c]).filter((v) => owned.get(v.id)?.total).length,
+    [versionsOf, owned],
+  );
+
+  // Grouped: a card counts as owned when any of its versions is. Otherwise every version counts on its own.
   const setStats = useMemo(() => {
     const m = new Map<string, { owned: number; total: number }>();
-    for (const c of cards) {
+    const units = grouped ? [...versionsOf.values()].map((v) => v[0]) : cards;
+    for (const c of units) {
       const s = m.get(c.set) ?? { owned: 0, total: 0 };
       s.total++;
-      if (owned.get(c.id)?.total) s.owned++;
+      if (grouped ? ownedVersions(c) : owned.get(c.id)?.total) s.owned++;
       m.set(c.set, s);
     }
     return m;
-  }, [cards, owned]);
+  }, [cards, owned, grouped, versionsOf, ownedVersions]);
 
-  const ownedPrintings = results.filter((c) => owned.get(c.id)?.total).length;
+  const ownedPrintings = results.filter((c) => (grouped ? ownedVersions(c) : owned.get(c.id)?.total)).length;
   const totalCopies = useMemo(() => [...owned.values()].reduce((s, o) => s + o.total, 0), [owned]);
 
   const index = openCard ? results.findIndex((c) => c.id === openCard.id) : -1;
@@ -112,6 +152,14 @@ export function Gallery() {
         >
           {filters.desc ? '↓' : '↑'}
         </button>
+        <div className="seg" role="group" aria-label="Alternate versions">
+          <button className={grouped ? 'on' : ''} onClick={() => setGrouped(true)} title="One tile per card, versions on click">
+            Grouped
+          </button>
+          <button className={grouped ? '' : 'on'} onClick={() => setGrouped(false)} title="Every version as its own tile">
+            All versions
+          </button>
+        </div>
         <div className="seg" role="group" aria-label="Card size">
           {['s', 'm', 'l'].map((s) => (
             <button key={s} className={size === s ? 'on' : ''} onClick={() => setSize(s)}>
@@ -157,6 +205,8 @@ export function Gallery() {
                 key={c.id}
                 card={c}
                 owned={owned.get(c.id)}
+                versionCount={grouped ? (versionsOf.get(versionKey(c))?.length ?? 1) : 1}
+                ownedVersionCount={grouped ? ownedVersions(c) : 0}
                 wanted={ctx.wantedIds.has(c.id) || ctx.wantedKeys.has(c.key)}
                 inDecks={ctx.deckKeys.has(c.key)}
                 language={user.defaultLanguage}

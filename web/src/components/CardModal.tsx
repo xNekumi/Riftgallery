@@ -124,6 +124,27 @@ export function CardModal({ card, onClose, onNavigate, prev, next }: Props) {
           )}
           {card.artist && <p className="muted small">Illustrated by {card.artist}</p>}
 
+          {printings.length > 1 && (
+            <section className="panel">
+              <h3>
+                Versions <span className="muted">· click to switch</span>
+              </h3>
+              <div className="printings">
+                {printings.map((p) => (
+                  <button
+                    key={p.id}
+                    className={`printing ${p.id === card.id ? 'current' : ''} ${ownedOf(owned, p.id).total ? '' : 'missing'}`}
+                    onClick={() => onNavigate?.(p)}
+                    title={`${cardLabel(p)} · ${p.code}`}
+                  >
+                    <img src={thumbUrl(p)} alt={p.name} loading="lazy" />
+                    <span>{p.code.split('/')[0]}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
           <section className="panel">
             <h3>
               In my collection <span className="muted">· {ownedByKey.get(card.key) ?? 0} of this card across all versions</span>
@@ -181,24 +202,6 @@ export function CardModal({ card, onClose, onNavigate, prev, next }: Props) {
             </section>
           )}
 
-          {printings.length > 1 && (
-            <section className="panel">
-              <h3>All versions</h3>
-              <div className="printings">
-                {printings.map((p) => (
-                  <button
-                    key={p.id}
-                    className={`printing ${p.id === card.id ? 'current' : ''} ${ownedOf(owned, p.id).total ? '' : 'missing'}`}
-                    onClick={() => onNavigate?.(p)}
-                    title={`${cardLabel(p)} · ${p.code}`}
-                  >
-                    <img src={thumbUrl(p)} alt={p.name} loading="lazy" />
-                    <span>{p.code.split('/')[0]}</span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
         </div>
       </div>
     </Modal>

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Card, Deck } from '../../types';
 import { checkDeck, parseDeckList, parseLine } from '../decklist';
-import { matchCardQuery, nameKey } from '../cards';
+import { matchCardQuery, nameKey, versionKey } from '../cards';
 import fixture from './fixture-cards.json';
 
 const cards = fixture as Card[];
@@ -104,5 +104,16 @@ describe('matchCardQuery', () => {
 
   it('finds cards by name', () => {
     expect(matchCardQuery(ogn, 'loose can')[0].baseName).toBe('Jinx - Loose Cannon');
+  });
+});
+
+describe('versionKey', () => {
+  const byCode = (code: string) => cards.find((c) => c.code === code)!;
+  it('groups alt arts with their standard version', () => {
+    expect(versionKey(byCode('OGN-202a/298'))).toBe(versionKey(byCode('OGN-202/298')));
+    expect(versionKey(byCode('OGN-202/298'))).toBe('OGN|202');
+  });
+  it('keeps different numbers apart', () => {
+    expect(versionKey(byCode('OGN-251/298'))).not.toBe(versionKey(byCode('OGN-202/298')));
   });
 });

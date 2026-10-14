@@ -104,11 +104,10 @@ export function variantOf(raw) {
   return { variant: 'base', variantLabel: '' };
 }
 
-/** Which finishes a printing exists in. Commons, Uncommons and Rares come in normal and foil. */
+/** Which finishes a printing exists in: Commons and Uncommons in normal and foil, everything from Rare up only foil. */
 export function finishesFor(rarity, variant) {
-  if (variant === 'alt' || variant === 'overnumbered' || variant === 'signature') return ['foil'];
-  if (rarity === 'Epic' || rarity === 'Showcase') return ['foil'];
-  return ['normal', 'foil'];
+  if (variant !== 'base' && variant !== 'special') return ['foil'];
+  return rarity === 'Common' || rarity === 'Uncommon' ? ['normal', 'foil'] : ['foil'];
 }
 
 export function shortHash(s) {

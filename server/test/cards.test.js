@@ -40,10 +40,12 @@ test('keywords drop numbers and non-keywords', () => {
   assert.deepEqual(extractKeywords('[Assault 2] [Action] [&gt;] [Add] [Deflect]'), ['Action', 'Assault', 'Deflect']);
 });
 
-test('finishes: C/U/R in normal and foil, Epic and special versions foil only', () => {
+test('finishes: Common and Uncommon in normal and foil, Rare and up foil only', () => {
   assert.deepEqual(finishesFor('Common', 'base'), ['normal', 'foil']);
-  assert.deepEqual(finishesFor('Rare', 'base'), ['normal', 'foil']);
+  assert.deepEqual(finishesFor('Uncommon', 'base'), ['normal', 'foil']);
+  assert.deepEqual(finishesFor('Rare', 'base'), ['foil']);
   assert.deepEqual(finishesFor('Epic', 'base'), ['foil']);
+  assert.deepEqual(finishesFor('Common', 'alt'), ['foil']);
   assert.deepEqual(finishesFor('Rare', 'overnumbered'), ['foil']);
 });
 

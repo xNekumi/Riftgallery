@@ -3,7 +3,7 @@ import path from 'node:path';
 import sharp from 'sharp';
 import { config } from './config.js';
 import { db, getMeta, setMeta } from './db.js';
-import { compareCards, dedupe, shortHash, sortSets, transformCard } from './cards.js';
+import { compareCards, dedupe, finishesFor, shortHash, sortSets, transformCard } from './cards.js';
 
 const fullDir = path.join(config.imageDir, 'full');
 const thumbDir = path.join(config.imageDir, 'thumb');
@@ -51,7 +51,11 @@ export function getCardsPayload() {
     .map((r) => JSON.parse(r.data));
   const rows = db.prepare('SELECT id, data, image_version FROM cards WHERE active = 1').all();
   const setOrder = new Map(sortSets(sets).map((s, i) => [s.set_id, i]));
-  const cards = rows.map((r) => ({ ...JSON.parse(r.data), img: r.image_version || null }));
+  const cards = rows.map((r) => {
+    const card = JSON.parse(r.data);
+    // Recomputed here so a changed foil rule applies without waiting for the next sync.
+    return { ...card, finishes: finishesFor(card.rarity, card.variant), img: r.image_version || null };
+  });
   cards.sort((a, b) => compareCards(a, b, setOrder));
   cards.forEach((c, i) => (c.order = i));
   const setsOut = sortSets(sets).map((s) => ({
@@ -63,6 +67,34 @@ export function getCardsPayload() {
   const version = getMeta('cards_version') || '0';
   cardsCache = { version, syncedAt: getMeta('last_sync'), sets: setsOut, cards };
   return cardsCache;
+}
+
+/**
+ * Moves copies stored in a finish a card does not exist in (e.g. "normal" for a foil-only Rare)
+ * to the finish it does exist in, so no copies get hidden when the foil rule changes.
+ */
+export function normalizeFinishes() {
+  const rows = db.prepare('SELECT id, data FROM cards').all();
+  const move = db.prepare(`
+    INSERT INTO collection (user_id, card_id, finish, language, qty, updated_at)
+      SELECT user_id, card_id, ?, language, qty, updated_at FROM collection WHERE card_id = ? AND finish = ?
+    ON CONFLICT(user_id, card_id, finish, language) DO UPDATE SET qty = qty + excluded.qty
+  `);
+  const drop = db.prepare('DELETE FROM collection WHERE card_id = ? AND finish = ?');
+  const fixWants = db.prepare("UPDATE wants SET finish = 'any' WHERE card_id = ? AND finish = ?");
+  let moved = 0;
+  db.transaction(() => {
+    for (const r of rows) {
+      const card = JSON.parse(r.data);
+      const finishes = finishesFor(card.rarity, card.variant);
+      for (const wrong of ['normal', 'foil'].filter((f) => !finishes.includes(f))) {
+        moved += move.run(finishes[0], r.id, wrong).changes;
+        drop.run(r.id, wrong);
+        fixWants.run(r.id, wrong);
+      }
+    }
+  })();
+  if (moved) console.log(`[sync] moved ${moved} collection entries to the card's only finish`);
 }
 
 export function cardExists(id) {
@@ -165,6 +197,7 @@ export async function runSync({ reason = 'manual' } = {}) {
       setMeta('last_sync', new Date().toISOString());
     })();
     cardsCache = null;
+    normalizeFinishes();
     console.log(`[sync] ${keep.length} cards stored (${aliases.size} duplicates merged)`);
 
     const failures = await syncImages();
@@ -184,6 +217,7 @@ export async function runSync({ reason = 'manual' } = {}) {
 }
 
 export function startSyncSchedule() {
+  normalizeFinishes();
   const hasCards = db.prepare('SELECT COUNT(*) AS n FROM cards').get().n > 0;
   const last = getMeta('last_sync');
   const intervalMs = config.syncIntervalHours * 3600 * 1000;

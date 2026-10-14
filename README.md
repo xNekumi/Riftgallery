@@ -9,7 +9,8 @@ Kartenbilder werden einmalig heruntergeladen und lokal als WebP gespeichert (ca.
 
 ## Funktionen
 
-- **Galerie**: alle Karten als Bild, sortiert nach Set und Sammlernummer, Alt Arts direkt nach der normalen Karte.
+- **Galerie**: alle Karten als Bild, sortiert nach Set und Sammlernummer. Standardmäßig („Grouped“) ist jede Nummer eine
+  Kachel; Alt Arts (XXXa, XXXb …) stecken dahinter und sind per Klick erreichbar. „All versions“ zeigt jede Version einzeln.
   Karten, die du nicht besitzt, sind ausgegraut. Auf jeder Karte kannst du zwischen **Normal** und **Foil**
   umschalten und mit `−`/`+` die Anzahl ändern. Fortschritt pro Set wird angezeigt.
 - **Detailansicht** (Klick auf die Karte): großes Bild, Kartentext, Anzahl je Foil/Normal **und Sprache**,
@@ -128,8 +129,9 @@ Aufbau:
   - `src/lib/decklist.ts` – Decklisten-Parser und Abgleich
   - `src/lib/filters.ts` – Suche und Filter
 
-Foil-Regeln (in `server/src/cards.js` → `finishesFor`): Common, Uncommon, Rare und Promo gibt es normal und als Foil;
-Epic, Showcase sowie Alt Art / Overnumbered / Signature nur als Foil.
+Foil-Regeln (in `server/src/cards.js` → `finishesFor`): Common und Uncommon gibt es normal und als Foil; ab Rare
+(Rare, Epic, Showcase, Promo) sowie Alt Art / Overnumbered / Signature nur als Foil. Ändert sich die Regel, werden
+bereits erfasste Kopien beim nächsten Start automatisch auf die passende Variante umgebucht.
 
 Wenn später der offizielle Riot-API-Key da ist, muss nur `server/src/sync.js` (Datenquelle) angepasst werden –
 die Sammlungen bleiben erhalten.

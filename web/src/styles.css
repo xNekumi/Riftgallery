@@ -519,6 +519,13 @@ h3 .seg button {
   color: var(--gold);
   margin-left: auto;
 }
+.badge.versions {
+  margin-left: auto;
+  color: var(--muted);
+}
+.badge.versions.has {
+  color: var(--gold);
+}
 .badge.new {
   background: var(--good);
   color: #062414;
