@@ -4,6 +4,7 @@ import sharp from 'sharp';
 import { config } from './config.js';
 import { db, getMeta, setMeta } from './db.js';
 import { compareCards, dedupe, finishesFor, shortHash, sortSets, transformCard } from './cards.js';
+import { fetchRiotCards } from './riot.js';
 
 const fullDir = path.join(config.imageDir, 'full');
 const thumbDir = path.join(config.imageDir, 'thumb');
@@ -155,17 +156,52 @@ export async function runSync({ reason = 'manual' } = {}) {
   console.log(`[sync] starting (${reason})`);
   try {
     syncState.phase = 'cards';
-    const [rawSets, rawCards] = await Promise.all([fetchAll('/sets'), fetchAll('/cards')]);
-    if (!rawCards.length) throw new Error('API returned no cards');
+    const [rawSets, codexCards, riotCards] = await Promise.all([
+      fetchAll('/sets'),
+      fetchAll('/cards'),
+      config.riotGalleryUrl
+        ? fetchRiotCards().catch((err) => {
+            console.warn(`[sync] Riot card gallery unavailable: ${err.message}`);
+            return null;
+          })
+        : Promise.resolve([]),
+    ]);
+    if (!codexCards.length) throw new Error('API returned no cards');
+
+    // Sets Riftcodex does not have yet come from Riot's gallery. Once a set is taken from Riot it stays
+    // with Riot, so card ids (and everyone's collection entries) do not change when Riftcodex catches up.
+    const codexSetIds = new Set([...rawSets.map((s) => s.set_id), ...codexCards.map((c) => c.set?.set_id)]);
+    const riotSetIds = new Set(JSON.parse(getMeta('riot_sets') || '[]'));
+    for (const c of riotCards ?? []) if (!codexSetIds.has(c.set.set_id)) riotSetIds.add(c.set.set_id);
+    const rawCards = [
+      ...codexCards.filter((c) => !riotSetIds.has(c.set?.set_id)),
+      ...(riotCards ?? []).filter((c) => riotSetIds.has(c.set.set_id)),
+    ];
+    const riotSets = [...riotSetIds].map((id) => {
+      const cards = (riotCards ?? []).filter((c) => c.set.set_id === id);
+      const known = db.prepare('SELECT data FROM sets WHERE set_id = ?').get(id);
+      const prev = known ? JSON.parse(known.data) : {};
+      return {
+        set_id: id,
+        name: cards[0]?.set.label ?? prev.name ?? id,
+        card_count: cards.length || prev.card_count || 0,
+        // Riot's gallery has no release date; the first time we saw the set keeps it sorted as the newest.
+        published_on: prev.published_on ?? new Date().toISOString(),
+        source: 'riot',
+      };
+    });
     const { keep, aliases } = dedupe(rawCards);
 
     db.transaction(() => {
       const upsertSet = db.prepare(
         'INSERT INTO sets (set_id, data) VALUES (?, ?) ON CONFLICT(set_id) DO UPDATE SET data = excluded.data',
       );
-      for (const s of rawSets) upsertSet.run(s.set_id, JSON.stringify(s));
+      for (const s of rawSets) if (!riotSetIds.has(s.set_id)) upsertSet.run(s.set_id, JSON.stringify(s));
+      for (const s of riotSets) upsertSet.run(s.set_id, JSON.stringify(s));
+      setMeta('riot_sets', JSON.stringify([...riotSetIds]));
 
-      db.prepare('UPDATE cards SET active = 0').run();
+      // If Riot could not be reached, keep its cards as they are instead of hiding them.
+      db.prepare(riotCards ? 'UPDATE cards SET active = 0' : "UPDATE cards SET active = 0 WHERE id NOT LIKE 'riot-%'").run();
       const upsertCard = db.prepare(`
         INSERT INTO cards (id, data, image_url, active, updated_at) VALUES (?, ?, ?, 1, datetime('now'))
         ON CONFLICT(id) DO UPDATE SET data = excluded.data, image_url = excluded.image_url, active = 1,
@@ -198,7 +234,10 @@ export async function runSync({ reason = 'manual' } = {}) {
     })();
     cardsCache = null;
     normalizeFinishes();
-    console.log(`[sync] ${keep.length} cards stored (${aliases.size} duplicates merged)`);
+    console.log(
+      `[sync] ${keep.length} cards stored (${aliases.size} duplicates merged` +
+        `${riotSetIds.size ? `, from Riot's gallery: ${[...riotSetIds].join(', ')}` : ''})`,
+    );
 
     const failures = await syncImages();
     if (failures) syncState.lastError = `${failures} image(s) failed to download; they will be retried next sync.`;

@@ -5,6 +5,9 @@ Suche und Filtern, Decklisten-Abgleich, Want-Liste und Booster-Modus. Mehrere Ac
 unterstützt, jeder mit eigener Sammlung.
 
 Die Kartendaten kommen von [riftcodex.com](https://riftcodex.com) und werden automatisch einmal täglich aktualisiert.
+Sets, die Riftcodex noch nicht hat (z. B. ein neues Set vor dem Release), werden aus Riots offizieller
+[Kartengalerie](https://riftbound.leagueoflegends.com/en-us/card-gallery/) ergänzt. Ein so übernommenes Set bleibt bei
+Riot als Quelle, damit sich die Karten-IDs (und damit eure Sammlungen) später nicht ändern.
 Kartenbilder werden einmalig heruntergeladen und lokal als WebP gespeichert (ca. 180 MB).
 
 ## Funktionen
@@ -106,6 +109,7 @@ Umgebungsvariablen (in `docker-compose.yml` unter `environment`):
 | `SYNC_INTERVAL_HOURS` | `24` | Abstand der automatischen Kartendaten-Updates (0 = nur manuell über Einstellungen → Admin) |
 | `SESSION_DAYS` | `30` | Wie lange man eingeloggt bleibt |
 | `RIFTCODEX_API` | `https://api.riftcodex.com` | Quelle der Kartendaten |
+| `RIOT_GALLERY_URL` | Riots Kartengalerie | Ergänzt Sets, die Riftcodex noch nicht hat (leer = aus) |
 | `TRUST_PROXY` | `loopback, linklocal, uniquelocal` | Welche Proxys (nginx) für `X-Forwarded-*` vertraut werden |
 
 ## Entwicklung
